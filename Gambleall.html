@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mines Game | JavaScript Version</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #1a2b3c;
+            --secondary: #2c3e50;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --safe: #27ae60;
+            --safe-light: #2ecc71;
+            --mine: #e74c3c;
+            --mine-light: #ff6b6b;
+            --text: #ecf0f1;
+            --grid-bg: #34495e;
+            --button-bg: #16a085;
+            --button-hover: #1abc9c;
+            --panel-bg: rgba(255, 255, 255, 0.05);
+            --win: #f1c40f;
+            --disabled: #7f8c8d;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: var(--panel-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, var(--accent), var(--safe));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            background-color: var(--secondary);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background-color: var(--grid-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .cell:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .cell.revealed {
+            cursor: default;
+        }
+
+        .cell.revealed:hover {
+            transform: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .cell.diamond {
+            background-color: var(--safe);
+        }
+
+        .cell.mine {
+            background-color: var(--mine);
+        }
+
+        .cell .content {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .cell.revealed .content {
+            opacity: 1;
+        }
+
+        .cell.revealed.diamond .content {
+            animation: revealDiamond 0.5s ease-out forwards;
+        }
+
+        .cell.revealed.mine .content {
+            animation: revealMine 0.5s ease-out forwards;
+        }
+
+        @keyframes revealDiamond {
+            0% {
+                opacity: 0;
+                transform: scale(0) rotate(0deg);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2) rotate(180deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(360deg);
+            }
+        }
+
+        @keyframes revealMine {
+            0% {
+                opacity: 0;
+                transform: scale(0);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.3);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .bet-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--button-hover);
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background-color: var(--disabled);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        button.primary {
+            background-color: var(--accent);
+        }
+
+        button.primary:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+        }
+
+        button.danger {
+            background-color: var(--mine);
+        }
+
+        button.danger:hover:not(:disabled) {
+            background-color: #c0392b;
+        }
+
+        .bet-amount {
+            background-color: var(--secondary);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .game-info {
+            background-color: var(--secondary);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .info-title {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .info-content {
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            line-height: 1.5;
+        }
+
+        .game-message {
+            text-align: center;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .win-message {
+            background-color: rgba(241, 196, 15, 0.2);
+            color: var(--win);
+        }
+
+        .loss-message {
+            background-color: rgba(231, 76, 60, 0.2);
+            color: var(--mine);
+        }
+
+        .bet-option {
+            display: inline-block;
+        }
+
+        .bet-option input {
+            display: none;
+        }
+
+        .bet-option label {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: var(--button-bg);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .bet-option input:checked + label {
+            background-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .bet-option label:hover {
+            background-color: var(--button-hover);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-buttons button {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .game-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .game-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .bet-controls {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .bet-amount {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Mines Game</h1>
+            <p class="subtitle">Click to reveal gems and avoid mines!</p>
+        </header>
+        
+        <div class="game-message win-message">
+            <i class="fas fa-trophy"></i> Congratulations! You won!
+        </div>
+        
+        <div class="game-message loss-message">
+            <i class="fas fa-bomb"></i> Game Over! You hit a mine!
+        </div>
+        
+        <div class="game-stats">
+            <div class="stat">
+                <div class="stat-value" id="mines-count">5</div>
+                <div class="stat-label">Mines</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="multiplier">1.00x</div>
+                <div class="stat-label">Multiplier</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="gems-left">20</div>
+                <div class="stat-label">Gems Left</div>
+            </div>
+        </div>
+        
+        <div class="game-grid" id="game-grid">
+            <!-- Cells will be generated by JavaScript -->
+        </div>
+        
+        <div class="instructions">
+            <p><i class="fas fa-mouse-pointer"></i> Click on cells to reveal diamonds or mines</p>
+            <p><i class="fas fa-exclamation-triangle"></i> Avoid the 5 mines to win!</p>
+        </div>
+        
+        <div class="game-controls">
+            <div class="bet-controls">
+                <div class="bet-option">
+                    <input type="radio" name="bet" id="bet-10" value="0.10">
+                    <label for="bet-10">0.10</label>
+                </div>
+                <div class="bet-option">
+                    <input type="radio" name="bet" id="bet-50" value="0.50">
+                    <label for="bet-50">0.50</label>
+                </div>
+                <div class="bet-option">
+                    <input type="radio" name="bet" id="bet-100" value="1.00" checked>
+                    <label for="bet-100">1.00</label>
+                </div>
+                <div class="bet-option">
+                    <input type="radio" name="bet" id="bet-500" value="5.00">
+                    <label for="bet-500">5.00</label>
+                </div>
+                <div class="bet-option">
+                    <input type="radio" name="bet" id="bet-1000" value="10.00">
+                    <label for="bet-1000">10.00</label>
+                </div>
+            </div>
+            
+            <div class="bet-amount">
+                <span>Bet Amount:</span>
+                <span id="current-bet">1.00</span>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button id="cash-out-btn" class="primary" disabled>
+                <i class="fas fa-money-bill-wave"></i> Cash Out
+            </button>
+            <button id="new-game-btn">
+                <i class="fas fa-redo"></i> New Game
+            </button>
+        </div>
+        
+        <div class="game-info">
+            <div class="info-title">How to Play</div>
+            <div class="info-content">
+                <p>1. Set your bet amount and start clicking cells</p>
+                <p>2. Each diamond increases your multiplier</p>
+                <p>3. If you hit a mine, you lose your bet</p>
+                <p>4. Cash out at any time to secure your winnings</p>
+                <p>5. Find all 20 diamonds to win the maximum prize!</p>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Mines Game - For entertainment purposes only</p>
+    </footer>
+
+    <script>
+        // Game state
+        const gameState = {
+            minesCount: 5,
+            gemsCount: 20,
+            totalCells: 25,
+            betAmount: 1.00,
+            multiplier: 1.00,
+            gemsFound: 0,
+            gameActive: false,
+            gameOver: false,
+            cashOutMultiplier: 1.00
+        };
+
+        // DOM elements
+        const gameGrid = document.getElementById('game-grid');
+        const minesCountEl = document.getElementById('mines-count');
+        const multiplierEl = document.getElementById('multiplier');
+        const gemsLeftEl = document.getElementById('gems-left');
+        const currentBetEl = document.getElementById('current-bet');
+        const cashOutBtn = document.getElementById('cash-out-btn');
+        const newGameBtn = document.getElementById('new-game-btn');
+        const winMessage = document.querySelector('.win-message');
+        const lossMessage = document.querySelector('.loss-message');
+        const betInputs = document.querySelectorAll('input[name="bet"]');
+
+        // Initialize the game
+        function initGame() {
+            resetGameState();
+            createGameGrid();
+            setupEventListeners();
+        }
+
+        // Reset game state
+        function resetGameState() {
+            gameState.gemsFound = 0;
+            gameState.multiplier = 1.00;
+            gameState.cashOutMultiplier = 1.00;
+            gameState.gameActive = true;
+            gameState.gameOver = false;
+            
+            updateUI();
+            hideMessages();
+            cashOutBtn.disabled = true;
+        }
+
+        // Create the game grid with random mines
+        function createGameGrid() {
+            gameGrid.innerHTML = '';
+            
+            // Create array with mines and gems
+            const cells = [];
+            for (let i = 0; i < gameState.minesCount; i++) {
+                cells.push('mine');
+            }
+            for (let i = 0; i < gameState.gemsCount; i++) {
+                cells.push('diamond');
+            }
+            
+            // Shuffle the array
+            shuffleArray(cells);
+            
+            // Create grid cells
+            cells.forEach((type, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = index;
+                cell.dataset.type = type;
+                
+                const content = document.createElement('div');
+                content.className = 'content';
+                content.textContent = type === 'diamond' ? '💎' : '💣';
+                
+                cell.appendChild(content);
+                gameGrid.appendChild(cell);
+            });
+        }
+
+        // Shuffle array using Fisher-Yates algorithm
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Cell click events
+            gameGrid.addEventListener('click', (e) => {
+                const cell = e.target.closest('.cell');
+                if (!cell || cell.classList.contains('revealed') || !gameState.gameActive || gameState.gameOver) {
+                    return;
+                }
+                
+                revealCell(cell);
+            });
+            
+            // Bet amount selection
+            betInputs.forEach(input => {
+                input.addEventListener('change', (e) => {
+                    if (gameState.gameActive && !gameState.gameOver) {
+                        // Don't allow changing bet during active game
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    gameState.betAmount = parseFloat(e.target.value);
+                    currentBetEl.textContent = gameState.betAmount.toFixed(2);
+                });
+            });
+            
+            // Cash out button
+            cashOutBtn.addEventListener('click', () => {
+                if (!gameState.gameActive || gameState.gameOver) return;
+                
+                cashOut();
+            });
+            
+            // New game button
+            newGameBtn.addEventListener('click', () => {
+                resetGameState();
+                createGameGrid();
+            });
+        }
+
+        // Reveal a cell
+        function revealCell(cell) {
+            if (!gameState.gameActive || gameState.gameOver) return;
+            
+            const type = cell.dataset.type;
+            cell.classList.add('revealed', type);
+            
+            if (type === 'diamond') {
+                handleDiamondReveal();
+            } else {
+                handleMineReveal();
+            }
+            
+            // Enable cash out after first reveal
+            cashOutBtn.disabled = false;
+        }
+
+        // Handle diamond reveal
+        function handleDiamondReveal() {
+            gameState.gemsFound++;
+            gameState.multiplier += 0.15;
+            gameState.cashOutMultiplier = gameState.multiplier;
+            
+            updateUI();
+            
+            // Check for win condition
+            if (gameState.gemsFound === gameState.gemsCount) {
+                winGame();
+            }
+        }
+
+        // Handle mine reveal
+        function handleMineReveal() {
+            gameState.gameOver = true;
+            gameState.gameActive = false;
+            
+            // Reveal all mines
+            document.querySelectorAll('.cell[data-type="mine"]').forEach(cell => {
+                cell.classList.add('revealed', 'mine');
+            });
+            
+            showMessage(lossMessage);
+            cashOutBtn.disabled = true;
+        }
+
+        // Cash out function
+        function cashOut() {
+            if (!gameState.gameActive || gameState.gameOver) return;
+            
+            gameState.gameOver = true;
+            gameState.gameActive = false;
+            
+            const winnings = (gameState.betAmount * gameState.cashOutMultiplier).toFixed(2);
+            showMessage(`You cashed out with ${winnings}!`, 'win');
+            cashOutBtn.disabled = true;
+        }
+
+        // Win the game
+        function winGame() {
+            gameState.gameOver = true;
+            gameState.gameActive = false;
+            
+            const winnings = (gameState.betAmount * gameState.multiplier).toFixed(2);
+            showMessage(`You won ${winnings}! Congratulations!`, 'win');
+            cashOutBtn.disabled = true;
+        }
+
+        // Update UI elements
+        function updateUI() {
+            minesCountEl.textContent = gameState.minesCount;
+            multiplierEl.textContent = gameState.multiplier.toFixed(2) + 'x';
+            gemsLeftEl.textContent = gameState.gemsCount - gameState.gemsFound;
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            hideMessages();
+            
+            if (type === 'win') {
+                winMessage.textContent = message;
+                winMessage.style.display = 'block';
+            } else {
+                lossMessage.textContent = message;
+                lossMessage.style.display = 'block';
+            }
+        }
+
+        // Hide all messages
+        function hideMessages() {
+            winMessage.style.display = 'none';
+            lossMessage.style.display = 'none';
+        }
+
+        // Initialize the game when page loads
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>
